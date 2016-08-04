@@ -1,0 +1,60 @@
+- SurgSim::Framework::BasicSceneElement:
+    Name: LeftSheet
+    Components:
+      - SurgSim::Framework::PoseComponent:
+          Name: Pose
+          Pose:
+            Quaternion: {Angle: 3.14159, Axis: [1.0, 0.0, 0.0]}
+            Translation: [0.08, 0.0, -0.11]
+      - SurgSim::Blocks::TransferPhysicsToGraphicsMeshBehavior:
+          Name: PhxToGfx
+          Id: LeftSheet/PhxToGfx
+          Source:
+            SurgSim::Physics::Fem2DRepresentation:
+              Name: Physics
+              Id: LeftSheet/Physics
+          Target:
+            SurgSim::Graphics::OsgMeshRepresentation:
+              Name: Graphics
+              Id: LeftSheet/Graphics
+          IndexMapMeshNames:
+              - sheet.ply
+              - sheet.ply
+      - SurgSim::Physics::Fem2DRepresentation:
+          Name: Physics
+          Id: LeftSheet/Physics
+          RayleighDampingMass: 100.0
+          IntegrationScheme:
+            SurgSim::Math::IntegrationScheme: INTEGRATIONSCHEME_LINEAR_EULER_IMPLICIT
+          Fem:
+            SurgSim::Physics::Fem2D:
+              FileName: sheet.ply
+          IsGravityEnabled: true
+          LinearSolver:
+            SurgSim::Math::LinearSolver: LINEARSOLVER_LU
+          IsDrivingSceneElementPose: true
+          FemElementType: SurgSim::Physics::Fem2DElementTriangle
+          CollisionRepresentation:
+            SurgSim::Physics::DeformableCollisionRepresentation:
+              Name: Collision
+              Id: LeftSheet/Collision
+      - SurgSim::Graphics::OsgMeshRepresentation:
+          Name: Graphics
+          Id: LeftSheet/Graphics
+          GenerateTangents: true
+          Mesh:
+            SurgSim::Graphics::Mesh:
+              FileName: sheet.ply
+          GroupReferences:
+            - __OssDefault__
+            - Shadowing
+            - Shadowed
+      - SurgSim::Physics::DeformableCollisionRepresentation:
+          Name: Collision
+          Id: LeftSheet/Collision
+          Allow: [__NONE__]
+          CollisionDetectionType: COLLISION_DETECTION_TYPE_CONTINUOUS
+          Shape:
+            SurgSim::Math::MeshShape:
+              FileName: sheet.ply
+

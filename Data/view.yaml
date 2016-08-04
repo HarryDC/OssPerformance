@@ -1,0 +1,20 @@
+- SurgSim::Framework::BasicSceneElement:
+    Name: View
+    IsActive: true
+    Components:
+      - SurgSim::Graphics::OsgView:
+          Camera:
+            SurgSim::Graphics::OsgCamera:
+              Id: 9018dd38-c1ae-4e80-a27a-dc24e4b75d35
+              Name: Camera
+          CameraManipulatorEnabled: true
+          CameraPosition: [-0.25, 0.25, 0]
+          CameraLookAt: [0, 0, 0]
+          KeyboardDeviceEnabled: true
+          Name: View
+          TargetScreen: 0
+      - SurgSim::Graphics::OsgCamera:
+          Id: 9018dd38-c1ae-4e80-a27a-dc24e4b75d35
+          Name: Camera
+          ProjectionMatrix: [[2.414213562373095, 0, 0, 0], [0, 2.414213562373095, 0, 0], [0, 0, -1.002002002002002, -0.02002002002002002], [0, 0, -1, 0]]
+          RenderGroupReference: __OssDefault__
