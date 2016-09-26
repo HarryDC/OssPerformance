@@ -28,18 +28,13 @@ surgsim_add_executable(Deformables "${DEFORMABLES_SOURCES}" "${DEFORMABLES_HEADE
 
 set(LIBS
 	${Boost_LIBRARIES}
-	SimQuestBlocks
-	SimQuestDevices
-	SimQuestPhysics
 	SurgSimBlocks
 	SurgSimCollision
 	SurgSimDataStructures
-	SurgSimDevices
 	SurgSimFramework
 	SurgSimGraphics
 	SurgSimMath
 	SurgSimPhysics
-	SurgSimInput
 )
 
 target_link_libraries(Deformables ${LIBS})

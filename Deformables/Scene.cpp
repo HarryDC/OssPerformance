@@ -26,9 +26,9 @@ void setupManagers(std::shared_ptr<SurgSim::Framework::Runtime> runtime,
 
 	auto graphicsManager = std::make_shared<SurgSim::Graphics::OsgManager>();
 	graphicsManager->setRate(60.0);
-
-	runtime->addManager(behaviorManager);
-	runtime->addManager(graphicsManager);
+//
+// 	runtime->addManager(graphicsManager);
+// 	runtime->addManager(behaviorManager);
 	runtime->addManager(physicsManager);
 }
 

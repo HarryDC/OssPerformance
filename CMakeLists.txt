@@ -2,5 +2,5 @@
 # Copyright 2012-2016, SimQuest Solutions Inc.
 
 add_subdirectory(Deformables)
-
+add_subdirectory(Benchmarks)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
