@@ -17,7 +17,7 @@
 
 namespace compute = boost::compute;
 
-static void runOpenClBenchmark(benchmark::State& state, int type)
+static void runOpenClBenchmarkSubIndex(benchmark::State& state, int type)
 {
 
 	// get default device and setup context
@@ -39,21 +39,21 @@ static void runOpenClBenchmark(benchmark::State& state, int type)
 	// std::cout << "device: " << testDevice.name() << std::endl;
 
 	const size_t n = state.range(0);
-	std::vector<Eigen::Matrix4f> matrices(n);
+	std::vector<Eigen::Matrix4d> matrices(n);
 
 	// check determinants
-	std::vector<float> host_determinants(n);
+	std::vector<double> host_determinants(n);
 
 	for (size_t i = 0; i < n; i++)
 	{
-		matrices[i] = Eigen::Matrix4f::Random();
+		matrices[i] = Eigen::Matrix4d::Random();
 	}
 
 	// copy matrices to the device
-	using compute::float16_;
+	using compute::double16_;
 
 	// function returning the determinant of a 4x4 matrix.
-	BOOST_COMPUTE_FUNCTION(float, determinant4x4, (const float16_ m),
+	BOOST_COMPUTE_FUNCTION(double, determinant4x4, (const double16_ m),
 	{
 		return m.s0* m.s5* m.sa * m.sf + m.s0* m.s6* m.sb * m.sd + m.s0* m.s7* m.s9 * m.se +
 		m.s1* m.s4* m.sb * m.se + m.s1* m.s6* m.s8 * m.sf + m.s1* m.s7* m.sa * m.sc +
@@ -73,7 +73,7 @@ static void runOpenClBenchmark(benchmark::State& state, int type)
 	/// Probably wrong, with the elements 3/2 and 2/3 does not quite matter for the benchmark test
 	// this is the method that eigen uses so we are doing the same number of multiplications as with the eigen
 	// .determinant call
-	BOOST_COMPUTE_FUNCTION(float, determinantFast4x4, (const float16_ m),
+	BOOST_COMPUTE_FUNCTION(double, determinantFast4x4, (const double16_ m),
 	{
 		return
 		((m.s0 * m.s5 - m.s1 * m.s4) * (m.sa * m.sf - m.sb * m.se))
@@ -84,8 +84,8 @@ static void runOpenClBenchmark(benchmark::State& state, int type)
 		+ ((m.s2 * m.s7 - m.s3 * m.s6) * (m.s8 * m.sd - m.s9 * m.sc));
 	});
 
-	compute::vector<float16_> input(n, context);
-	compute::vector<float> determinants(n, context);
+	compute::vector<double16_> input(n, context);
+	compute::vector<double> determinants(n, context);
 
 	while (state.KeepRunning())
 	{
@@ -104,14 +104,14 @@ static void runOpenClBenchmark(benchmark::State& state, int type)
 
 static void BM_determinant_OpenCL_CPU(benchmark::State& state)
 {
-	runOpenClBenchmark(state, compute::device::cpu);
+	runOpenClBenchmarkSubIndex(state, compute::device::cpu);
 }
 BENCHMARK(BM_determinant_OpenCL_CPU)->Range(2 << 10, 2 << 18);
 
 
 static void BM_determinant_OpenCL_GPU(benchmark::State& state)
 {
-	runOpenClBenchmark(state, compute::device::gpu);
+	runOpenClBenchmarkSubIndex(state, compute::device::gpu);
 }
 
 BENCHMARK(BM_determinant_OpenCL_GPU)->Range(2 << 10, 2 << 18);
@@ -121,14 +121,14 @@ BENCHMARK(BM_determinant_OpenCL_GPU)->Range(2 << 10, 2 << 18);
 static void BM_determinant_CPU(benchmark::State& state)
 {
 	const size_t n = state.range(0);
-	std::vector<Eigen::Matrix4f> matrices(n);
+	std::vector<Eigen::Matrix4d> matrices(n);
 
 	// check determinants
-	std::vector<float> host_determinants(n);
+	std::vector<double> host_determinants(n);
 
 	for (size_t i = 0; i < n; i++)
 	{
-		matrices[i] = Eigen::Matrix4f::Random();
+		matrices[i] = Eigen::Matrix4d::Random();
 	}
 
 	while (state.KeepRunning())
@@ -142,7 +142,7 @@ static void BM_determinant_CPU(benchmark::State& state)
 
 BENCHMARK(BM_determinant_CPU)->Range(2 << 10, 2 << 18);
 
-float det(const Eigen::Matrix4f& matrix)
+double det(const Eigen::Matrix4d& matrix)
 {
 	return matrix.determinant();
 }
@@ -150,20 +150,20 @@ float det(const Eigen::Matrix4f& matrix)
 static void BM_determinant_CPU_threaded(benchmark::State& state)
 {
 	const size_t n = state.range(0);
-	std::vector<Eigen::Matrix4f> matrices(n);
+	std::vector<Eigen::Matrix4d> matrices(n);
 
 	// check determinants
-	std::vector<float> host_determinants(n);
+	std::vector<double> host_determinants(n);
 
 
 	for (size_t i = 0; i < n; i++)
 	{
-		matrices[i] = Eigen::Matrix4f::Random();
+		matrices[i] = Eigen::Matrix4d::Random();
 	}
 
-	std::vector<std::future<float>> m_futures(n);
+	std::vector<std::future<double>> m_futures(n);
 
-	static auto f = [](const Eigen::Matrix4f & m)
+	static auto f = [](const Eigen::Matrix4d & m)
 	{
 		return m.determinant();
 	};
