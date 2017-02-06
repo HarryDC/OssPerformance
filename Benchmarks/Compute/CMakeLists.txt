@@ -1,5 +1,16 @@
-find_package(Boost 1.54 COMPONENTS program_options REQUIRED)
+
 find_package(OpenCL REQUIRED)
+
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
+link_directories(
+	${Boost_LIBRARY_DIRS}
+)
+
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}
@@ -9,10 +20,12 @@ include_directories(
 	"${OSG_INCLUDE_DIR}"
 	"${YAML_CPP_INCLUDE_DIR}"
 	"${OpenCL_INCLUDE_DIR}"
+	${VIENNACL_INCLUDE_DIRS}
 )
 
 set(BENCHMARK_SOURCES
-		Compute.cpp
+	Compute.cpp
+	ComputeMain.cpp
 )
 
 set(BENCHMARK_HEADERS
@@ -25,8 +38,8 @@ set(LIBS
 	${Boost_LIBRARIES}
 	${benchmark_LIBRARY}
 	Shlwapi
-	SurgSimCollision
 	${OpenCL_LIBRARIES}
+	SurgSimFramework
 )
 
 target_link_libraries(Compute ${LIBS})

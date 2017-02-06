@@ -8,6 +8,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/LU>
+#include <Eigen/StdVector>
+
 
 #include <boost/compute/function.hpp>
 #include <boost/compute/system.hpp>
@@ -20,6 +22,8 @@
 
 int low = 2 << 10;
 int high = 2 << 18;
+
+const size_t threads = 8;
 
 namespace compute = boost::compute;
 
@@ -37,6 +41,69 @@ compute::device getDevice(int type)
 	}
 	return compute::device();
 }
+
+size_t verify(const std::vector<Eigen::Matrix4d>& matrices, const std::vector<double>& determinants)
+{
+	size_t result = 0;
+	for (int i = 0; i < matrices.size(); ++i)
+	{
+		double det = matrices[i].determinant();
+		double diff = std::abs(det - determinants[i]);
+		//std::cout << det << ", " << determinants[i] << ", " << diff << "\n";
+		if (diff > 0.00001)
+		{
+			++result;
+		}
+	}
+
+	if (result > 0)
+	{
+		std::cout << result << " determinants did not match.\n";
+	}
+
+	return result;
+}
+
+__declspec(align(32)) struct MatrixData
+{
+	Eigen::Matrix4d matrix;
+	__declspec(align(32)) double result;
+};
+
+
+bool det1(const std::vector<Eigen::Matrix4d>& matrices, size_t low,
+		  size_t high, std::vector<double>* result)
+{
+	if (high > matrices.size())
+	{
+		high = matrices.size();
+	}
+
+	for (size_t i = low; i < high; ++i)
+	{
+		(*result)[i] = matrices[i].determinant();
+	}
+
+	return true;
+}
+
+
+bool det2(std::vector<MatrixData>* matrices, size_t low,
+		  size_t high)
+{
+	if (high > matrices->size())
+	{
+		high = matrices->size();
+	}
+
+	for (size_t i = low; i < high; ++i)
+	{
+		(*matrices)[i].result = (*matrices)[i].matrix.determinant();
+	}
+
+	return true;
+}
+
 
 static void runOpenClBenchmarkSubIndex(benchmark::State& state, int type)
 {
@@ -68,6 +135,20 @@ static void runOpenClBenchmarkSubIndex(benchmark::State& state, int type)
 	/// Probably wrong, with the elements 3/2 and 2/3 does not quite matter for the benchmark test
 	// this is the method that eigen uses so we are doing the same number of multiplications as with the eigen
 	// .determinant call
+
+// 	return bruteforce_det4_helper(m, 0, 1, 2, 3)
+// 		- bruteforce_det4_helper(m, 0, 2, 1, 3)
+// 		+ bruteforce_det4_helper(m, 0, 3, 1, 2)
+// 		+ bruteforce_det4_helper(m, 1, 2, 0, 3)
+// 		- bruteforce_det4_helper(m, 1, 3, 0, 2)
+// 		+ bruteforce_det4_helper(m, 2, 3, 0, 1);
+//
+
+// 	return (matrix.coeff(j, 0) * matrix.coeff(k, 1) - matrix.coeff(k, 0) * matrix.coeff(j, 1))
+// 		* (matrix.coeff(m, 2) * matrix.coeff(n, 3) - matrix.coeff(n, 2) * matrix.coeff(m, 3));
+// }
+
+
 	BOOST_COMPUTE_FUNCTION(double, determinantFast4x4, (const double16_ m),
 	{
 		return
@@ -112,15 +193,17 @@ static void runOpenClBenchmarkSubIndex(benchmark::State& state, int type)
 		queue.finish();
 	}
 
+
+
 	state.SetItemsProcessed(state.range(0)*state.iterations());
-	state.SetBytesProcessed(state.range(0)*state.iterations() * sizeof(double));
+	state.SetBytesProcessed(state.range(0)*state.iterations() * sizeof(double) * 16);
 }
 
 static void BM_determinant_OpenCL_CPU(benchmark::State& state)
 {
 	runOpenClBenchmarkSubIndex(state, compute::device::cpu);
 }
-BENCHMARK(BM_determinant_OpenCL_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
+//BENCHMARK(BM_determinant_OpenCL_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 
 static void BM_determinant_OpenCL_GPU(benchmark::State& state)
@@ -128,7 +211,7 @@ static void BM_determinant_OpenCL_GPU(benchmark::State& state)
 	runOpenClBenchmarkSubIndex(state, compute::device::gpu);
 }
 
-BENCHMARK(BM_determinant_OpenCL_GPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
+//BENCHMARK(BM_determinant_OpenCL_GPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 static void runOpenClBenchmarkMappedView(benchmark::State& state, int type)
 {
@@ -208,8 +291,10 @@ static void runOpenClBenchmarkMappedView(benchmark::State& state, int type)
 		queue.finish();
 	}
 
+
+
 	state.SetItemsProcessed(state.range(0)*state.iterations());
-	state.SetBytesProcessed(state.range(0)*state.iterations() * sizeof(double));
+	state.SetBytesProcessed(state.range(0)*state.iterations() * sizeof(double) * 16);
 
 }
 
@@ -217,13 +302,13 @@ static void BM_determinantMapped_OpenCL_CPU(benchmark::State& state)
 {
 	runOpenClBenchmarkMappedView(state, compute::device::cpu);
 }
-BENCHMARK(BM_determinantMapped_OpenCL_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
+//BENCHMARK(BM_determinantMapped_OpenCL_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 static void BM_determinantMapped_OpenCL_GPU(benchmark::State& state)
 {
 	runOpenClBenchmarkMappedView(state, compute::device::gpu);
 }
-BENCHMARK(BM_determinantMapped_OpenCL_GPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
+//BENCHMARK(BM_determinantMapped_OpenCL_GPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 static void BM_determinant_CPU(benchmark::State& state)
 {
@@ -231,7 +316,7 @@ static void BM_determinant_CPU(benchmark::State& state)
 	std::vector<Eigen::Matrix4d> matrices(n);
 
 	// check determinants
-	std::vector<double> host_determinants(n);
+	std::vector<double> result(n);
 
 	for (size_t i = 0; i < n; i++)
 	{
@@ -240,72 +325,239 @@ static void BM_determinant_CPU(benchmark::State& state)
 
 	while (state.KeepRunning())
 	{
-		for (size_t i = 0; i < n; i++)
-		{
-			host_determinants[i] = matrices[i].determinant();
-		}
+		det1(matrices, 0, n, &result);
 	}
 
+	verify(matrices, result);
+
 	state.SetItemsProcessed(state.range(0)*state.iterations());
-	state.SetBytesProcessed(state.range(0)*state.iterations() * sizeof(double));
+	state.SetBytesProcessed(state.range(0)*state.iterations() * sizeof(double) * 16);
 
 }
 
 BENCHMARK(BM_determinant_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
-void det(const std::vector<Eigen::Matrix4d>& matrices, size_t low, size_t high, std::vector<double>* result)
+
+static void BM_threaded_determinant_vec_CPU(benchmark::State& state)
 {
-	if (high > matrices.size())
+	const size_t n = state.range(0);
+	std::vector<Eigen::Matrix4d> matrices(n);
+
+	// check determinants
+
+	std::vector<double> results(n);
+
+	for (size_t i = 0; i < n; i++)
 	{
-		high = matrices.size();
+		matrices[i] = Eigen::Matrix4d::Random();
 	}
 
-	for (size_t i = low; i < high; ++i)
+
+	size_t count = n / threads;
+
+	std::vector<std::future<bool>> m_futures(threads);
+
+
+	while (state.KeepRunning())
 	{
-		(*result)[i] = matrices[i].determinant();
+		for (size_t i = 0; i < threads; i++)
+		{
+			m_futures[i] = std::async(std::launch::async, det1, matrices, count * i, count * (i + 1), &results);
+			//det(matrices, count * i, count * (i + 1), &result);
+		}
+		for (auto& future : m_futures)
+		{
+			future.get();
+		}
+	}
+
+	verify(matrices, results);
+
+	state.SetItemsProcessed(state.range(0)*state.iterations());
+	state.SetBytesProcessed(state.range(0)*state.iterations() * sizeof(double) * 16);
+}
+
+
+BENCHMARK(BM_threaded_determinant_vec_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond)->UseRealTime();
+
+
+
+static void BM_threaded_determinant_struct_CPU(benchmark::State& state)
+{
+	const size_t n = state.range(0);
+	std::vector<MatrixData> matrices(n);
+
+	std::vector<double> results(n);
+
+	for (size_t i = 0; i < n; i++)
+	{
+		matrices[i].matrix = Eigen::Matrix4d::Random();
+	}
+
+
+	size_t count = n / threads;
+
+	std::vector<std::future<bool>> m_futures(threads);
+
+
+	while (state.KeepRunning())
+	{
+		for (size_t i = 0; i < threads; i++)
+		{
+			m_futures[i] = std::async(std::launch::async, det2, &matrices, count * i, count * (i + 1));
+			//det2(&matrices, count * i, count * (i + 1));
+		}
+		for (auto& future : m_futures)
+		{
+			future.get();
+		}
+	}
+
+
+	state.SetItemsProcessed(state.range(0)*state.iterations());
+	state.SetBytesProcessed(state.range(0)*state.iterations() * sizeof(double) * 16);
+}
+
+
+BENCHMARK(BM_threaded_determinant_struct_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond)->UseRealTime();
+
+
+
+static void BM_thread_launch_overhead(benchmark::State& state)
+{
+
+	auto f = [](const size_t val)
+	{
+		return val + 1;
+	};
+
+	const size_t threads = state.range(0);
+
+	std::vector<std::future<size_t>> m_futures(threads);
+
+	while (state.KeepRunning())
+	{
+		size_t sum = 0;
+		for (size_t i = 0; i < threads; ++i)
+		{
+			m_futures[i] = std::async(std::launch::async, f, i);
+		}
+
+		for (auto& future : m_futures)
+		{
+			sum += future.get();
+		}
 	}
 }
 
 
-// static void BM_threaded_determinant_CPU(benchmark::State& state)
-// {
-// 	const size_t n = state.range(0);
-// 	std::vector<Eigen::Matrix4d> matrices(n);
-//
-// 	// check determinants
-// 	std::vector<double> result(n);
-//
-// 	for (size_t i = 0; i < n; i++)
-// 	{
-// 		matrices[i] = Eigen::Matrix4d::Random();
-// 	}
-//
-//
-// 	size_t threads = 8;
-// 	size_t count = n / threads;
-//
-// 	std::vector<std::future<void>> m_futures(count);
-//
-//
-// 	while (state.KeepRunning())
-// 	{
-// 		for (size_t i = 0; i < count; i++)
-// 		{
-// 			m_futures[i] = std::async(std::launch::async, det, matrices, count * i, count * (i + 1), &result);
-// 		}
-// 		for (const auto& future : m_futures)
-// 		{
-// 			future.wait();
-// 		}
-// 	}
-//
-// 	state.SetItemsProcessed(state.range(0)*state.iterations());
-// 	state.SetBytesProcessed(state.range(0)*state.iterations() * sizeof(double));
-//
-// }
-//
-// BENCHMARK(BM_threaded_determinant_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
+//BENCHMARK(BM_thread_launch_overhead)->Range(1, 64);
 
+static void BM_determinant_eigen_pointers(benchmark::State& state)
+{
+	Eigen::Matrix4d matrix(Eigen::Matrix4d::Random());
+	double result;
+
+	Eigen::Matrix4d* mp = &matrix;
+	double* rp = &result;
+
+	while (state.KeepRunning())
+	{
+		benchmark::DoNotOptimize((*rp) = mp->determinant());
+	}
+
+	state.SetItemsProcessed(state.iterations());
+	state.SetBytesProcessed(state.iterations() * sizeof(double) * 16);
+}
+
+BENCHMARK(BM_determinant_eigen_pointers);
+
+static void BM_determinant_eigen_call(benchmark::State& state)
+{
+	std::vector<Eigen::Matrix4d> matrices(1);
+	std::vector<double> result(1);
+
+	matrices[0] = Eigen::Matrix4d::Random();
+
+	while (state.KeepRunning())
+	{
+		det1(matrices, 0, 1, &result);
+	}
+
+	state.SetItemsProcessed(state.iterations());
+	state.SetBytesProcessed(state.iterations() * sizeof(double) * 16);
+}
+
+BENCHMARK(BM_determinant_eigen_call);
+
+static void BM_determinant_eigen_stack(benchmark::State& state)
+{
+	Eigen::Matrix4d matrix(Eigen::Matrix4d::Random());
+	double result;
+
+	while (state.KeepRunning())
+	{
+		benchmark::DoNotOptimize(result = matrix.determinant());
+	}
+
+	state.SetItemsProcessed(state.iterations());
+	state.SetBytesProcessed(state.iterations() * sizeof(double) * 16);
+}
+
+BENCHMARK(BM_determinant_eigen_stack);
+
+static void BM_determinant_openmp_vectors(benchmark::State& state)
+{
+	const size_t n = state.range(0);
+	std::vector<Eigen::Matrix4d> matrices(n);
+
+	// check determinants
+	std::vector<double> result(n);
+
+	for (size_t i = 0; i < n; i++)
+	{
+		matrices[i] = Eigen::Matrix4d::Random();
+	}
+	while (state.KeepRunning())
+	{
+		#pragma omp parallel for
+		for (int i = 0; i < n; i++)
+		{
+			result[i] = matrices[i].determinant();
+		}
+
+	}
+
+	state.SetItemsProcessed(state.iterations()*n);
+	state.SetBytesProcessed(state.iterations() * sizeof(double) * 16);
+}
+
+BENCHMARK(BM_determinant_openmp_vectors)->Range(low, high)->Unit(benchmark::kMicrosecond);
+
+static void BM_determinant_openmp_structs(benchmark::State& state)
+{
+	const size_t n = state.range(0);
+	std::vector<MatrixData> matrices(n);
+
+	for (size_t i = 0; i < n; i++)
+	{
+		matrices[i].matrix = Eigen::Matrix4d::Random();
+	}
+	while (state.KeepRunning())
+	{
+		#pragma omp parallel for
+		for (int i = 0; i < n; i++)
+		{
+			matrices[i].result = matrices[i].matrix.determinant();
+		}
+
+	}
+
+	state.SetItemsProcessed(state.iterations()*n);
+	state.SetBytesProcessed(state.iterations() * sizeof(double) * 16);
+}
+
+BENCHMARK(BM_determinant_openmp_structs)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 
 
