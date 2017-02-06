@@ -1,5 +1,9 @@
 
 find_package(OpenCL REQUIRED)
+find_package(ViennaCL REQUIRED)
+
+add_definitions( -DVIENNACL_WITH_EIGEN )
+add_definitions( -DVIENNACL_WITH_OPENCL )
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -26,6 +30,7 @@ include_directories(
 set(BENCHMARK_SOURCES
 	Compute.cpp
 	ComputeMain.cpp
+	ViennaCl.cpp
 )
 
 set(BENCHMARK_HEADERS
