@@ -10,6 +10,8 @@
 #include <Eigen/LU>
 #include <Eigen/StdVector>
 
+#include <CL/cl.h>
+
 
 #include <boost/compute/function.hpp>
 #include <boost/compute/system.hpp>
@@ -20,10 +22,20 @@
 
 #include <future>
 
+namespace
+{
 int low = 2 << 10;
 int high = 2 << 18;
 
 const size_t threads = 8;
+
+struct MatrixData
+{
+	Eigen::Matrix4d matrix;
+	double result;
+};
+
+}
 
 namespace compute = boost::compute;
 
@@ -64,11 +76,7 @@ size_t verify(const std::vector<Eigen::Matrix4d>& matrices, const std::vector<do
 	return result;
 }
 
-__declspec(align(32)) struct MatrixData
-{
-	Eigen::Matrix4d matrix;
-	__declspec(align(32)) double result;
-};
+
 
 
 bool det1(const std::vector<Eigen::Matrix4d>& matrices, size_t low,
@@ -199,19 +207,19 @@ static void runOpenClBenchmarkSubIndex(benchmark::State& state, int type)
 	state.SetBytesProcessed(state.range(0)*state.iterations() * sizeof(double) * 16);
 }
 
-static void BM_determinant_OpenCL_CPU(benchmark::State& state)
+static void BM_determinant_opencl_CPU(benchmark::State& state)
 {
 	runOpenClBenchmarkSubIndex(state, compute::device::cpu);
 }
-//BENCHMARK(BM_determinant_OpenCL_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_determinant_opencl_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 
-static void BM_determinant_OpenCL_GPU(benchmark::State& state)
+static void BM_determinant_opencl_GPU(benchmark::State& state)
 {
 	runOpenClBenchmarkSubIndex(state, compute::device::gpu);
 }
 
-//BENCHMARK(BM_determinant_OpenCL_GPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_determinant_opencl_GPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 static void runOpenClBenchmarkMappedView(benchmark::State& state, int type)
 {
@@ -298,17 +306,17 @@ static void runOpenClBenchmarkMappedView(benchmark::State& state, int type)
 
 }
 
-static void BM_determinantMapped_OpenCL_CPU(benchmark::State& state)
+static void BM_determinantMapped_opencl_CPU(benchmark::State& state)
 {
 	runOpenClBenchmarkMappedView(state, compute::device::cpu);
 }
-//BENCHMARK(BM_determinantMapped_OpenCL_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_determinantMapped_opencl_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
-static void BM_determinantMapped_OpenCL_GPU(benchmark::State& state)
+static void BM_determinantMapped_opencl_GPU(benchmark::State& state)
 {
 	runOpenClBenchmarkMappedView(state, compute::device::gpu);
 }
-//BENCHMARK(BM_determinantMapped_OpenCL_GPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_determinantMapped_opencl_GPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 static void BM_determinant_CPU(benchmark::State& state)
 {
@@ -560,6 +568,38 @@ static void BM_determinant_openmp_structs(benchmark::State& state)
 BENCHMARK(BM_determinant_openmp_structs)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 
+static void runOpenClBenchmarkThroughput(benchmark::State& state, int type)
+{
+	auto testDevice = getDevice(type);
+	compute::context context(testDevice);
+	compute::command_queue queue(context, testDevice);
+
+	const size_t n = state.range(0);
+	std::vector<double> data(n);
+
+	compute::vector<double> gpuTarget(n, context);
 
 
+	while (state.KeepRunning())
+	{
+		compute::copy(data.begin(), data.end(), gpuTarget.begin(), queue);
+		compute::copy(gpuTarget.begin(), gpuTarget.end(), data.begin(), queue);
+	}
 
+	state.SetItemsProcessed(state.iterations() * n);
+	state.SetBytesProcessed(state.iterations() * sizeof(double) * n);
+}
+
+static void BM_throughput_opencl_CPU(benchmark::State& state)
+{
+	runOpenClBenchmarkThroughput(state, compute::device::cpu);
+}
+
+BENCHMARK(BM_throughput_opencl_CPU)->Range(low, high);
+
+static void BM_throughput_opencl_GPU(benchmark::State& state)
+{
+	runOpenClBenchmarkThroughput(state, compute::device::gpu);
+}
+
+BENCHMARK(BM_throughput_opencl_GPU)->Range(1024, high);

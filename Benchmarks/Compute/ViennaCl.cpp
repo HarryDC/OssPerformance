@@ -5,6 +5,20 @@
 #include <SurgSim/Math/Vector.h>
 #include "viennacl/vector.hpp"
 
+namespace
+{
+int low = 2 << 10;
+int high = 2 << 18;
+
+const size_t threads = 8;
+
+struct MatrixData
+{
+	Eigen::Matrix4d matrix;
+	double result;
+};
+
+}
 
 static void BM_ViennaCL_VecAddMultiply(benchmark::State& state)
 {
@@ -35,7 +49,7 @@ static void BM_ViennaCL_VecAddMultiply(benchmark::State& state)
 }
 
 
-BENCHMARK(BM_ViennaCL_VecAddMultiply)->Range(2 << 10, 2 << 18)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_ViennaCL_VecAddMultiply)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 static void BM_ViennaCL_VecAddMultiply_CPU(benchmark::State& state)
 {
@@ -57,69 +71,41 @@ static void BM_ViennaCL_VecAddMultiply_CPU(benchmark::State& state)
 }
 
 
-BENCHMARK(BM_ViennaCL_VecAddMultiply_CPU)->Range(2 << 10, 2 << 18)->Unit(benchmark::kMicrosecond);
-
-
-static void toOpenClDevice(benchmark::State& state)
-{
-	SurgSim::Math::Vector eigenVector = SurgSim::Math::Vector::Random(state.range(0));
-	viennacl::vector<double> vclVector(state.range(0));
-	while (state.KeepRunning())
-	{
-		viennacl::copy(eigenVector, vclVector);
-	}
-
-	state.SetBytesProcessed(sizeof(double)*state.range(0)*state.iterations());
-}
-
-static void BM_Overhead_CopyToCPU(benchmark::State& state)
-{
-
-	viennacl::ocl::switch_context(0);
-	toOpenClDevice(state);
-}
-
-BENCHMARK(BM_Overhead_CopyToCPU)->Range(2 << 10, 2 << 20);
-
-static void BM_Overhead_CopyToGPU(benchmark::State& state)
-{
-	viennacl::ocl::switch_context(1);
-	toOpenClDevice(state);
-}
-
-BENCHMARK(BM_Overhead_CopyToGPU)->Range(2 << 10, 2 << 20);
+BENCHMARK(BM_ViennaCL_VecAddMultiply_CPU)->Range(low, high)->Unit(benchmark::kMicrosecond);
 
 
 
-static void fromOpenClDevice(benchmark::State& state)
+static void viennaClThroughputEigen(benchmark::State& state)
 {
 	SurgSim::Math::Vector eigenVector = SurgSim::Math::Vector::Random(state.range(0));
 	viennacl::vector<double> vclVector(state.range(0));
 	viennacl::copy(eigenVector, vclVector);
 	while (state.KeepRunning())
 	{
+		viennacl::copy(eigenVector, vclVector);
 		viennacl::copy(vclVector, eigenVector);
 	}
 
 	state.SetBytesProcessed(sizeof(double)*state.range(0)*state.iterations());
+	state.SetItemsProcessed(state.range(0)*state.iterations());
 }
 
 
-static void BM_Overhead_CopyFromCPU(benchmark::State& state)
+static void BM_throughput_viennacl_eigen_CPU(benchmark::State& state)
 {
 
 	viennacl::ocl::switch_context(0);
-	fromOpenClDevice(state);
+	viennaClThroughputEigen(state);
 }
 
-BENCHMARK(BM_Overhead_CopyFromCPU)->Range(2 << 10, 2 << 20);
+BENCHMARK(BM_throughput_viennacl_eigen_CPU)->Range(1024, high);
 
-static void BM_Overhead_CopyFromGPU(benchmark::State& state)
+static void BM_throughput_viennacl_eigen_GPU(benchmark::State& state)
 {
 
 	viennacl::ocl::switch_context(1);
-	fromOpenClDevice(state);
+	viennaClThroughputEigen(state);
 }
 
-BENCHMARK(BM_Overhead_CopyFromGPU)->Range(2 << 10, 2 << 20);
+BENCHMARK(BM_throughput_viennacl_eigen_GPU)->Range(1024, high);
 
