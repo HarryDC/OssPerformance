@@ -7,16 +7,31 @@ find_path(benchmark_INCLUDE_DIR "benchmark/benchmark.h"
   PATHS ${BENCHMARK_DIR}
   PATH_SUFFIXES include
   NO_DEFAULT_PATH)
-find_path(benchmark_INCLUDE_DIR "benchmark/benchmark.h")
+  
+#find_path(benchmark_INCLUDE_DIR "benchmark/benchmark.h")
 
-find_library(benchmark_LIBRARY NAMES "benchmark"
+find_library(benchmark_LIBRARY_RELEASE NAMES "benchmark"
   PATHS ${BENCHMARK_DIR}
   PATH_SUFFIXES lib lib64
   NO_DEFAULT_PATH)
-find_library(benchmark_LIBRARY NAMES "benchmark")
+  
+#find_library(benchmark_LIBRARY_RELEASE NAMES "benchmark")
+
+find_library(benchmark_LIBRARY_DEBUG NAMES "benchmarkd"
+  PATHS ${BENCHMARK_DIR}
+  PATH_SUFFIXES lib lib64
+  NO_DEFAULT_PATH)
+  
+#find_library(benchmark_LIBRARY_DEBUG NAMES "benchmarkd")
+
+SET(benchmark_LIBRARY
+  debug ${benchmark_LIBRARY_DEBUG}
+  optimized ${benchmark_LIBRARY_RELEASE}
+  )
 
 include_directories(${benchmark_INCLUDE_DIR})
 
 add_subdirectory(StdLibrary)
 add_subdirectory(Collision)
 add_subdirectory(Compute)
+add_subdirectory(Vectorization)

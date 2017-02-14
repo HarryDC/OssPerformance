@@ -35,6 +35,7 @@ set(LIBS
 	SurgSimGraphics
 	SurgSimMath
 	SurgSimPhysics
+	SurgSimParallel
 )
 
 target_link_libraries(Deformables ${LIBS})
