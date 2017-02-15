@@ -13,6 +13,7 @@ include_directories(
 
 set(BENCHMARK_SOURCES
 	../Vectorize.cpp
+	../Solvers.cpp
 )
 
 set(BENCHMARK_HEADERS

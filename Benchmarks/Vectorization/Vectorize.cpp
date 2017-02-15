@@ -30,7 +30,7 @@ Eigen::SparseMatrix<double> createSparse(size_t rows, size_t cols, double densit
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_real_distribution<double> dens(0, 1);
-	std::uniform_real_distribution<double> numbers(-100, 100);
+	std::uniform_real_distribution<double> numbers(-0.1, 0.1);
 
 	Eigen::SparseMatrix<double> result(rows, cols);
 	for (size_t i = 0; i < rows; ++i)
@@ -43,7 +43,6 @@ Eigen::SparseMatrix<double> createSparse(size_t rows, size_t cols, double densit
 			}
 		}
 	}
-	result.makeCompressed();
 	return result;
 }
 
@@ -100,8 +99,8 @@ static void BM_gemm_sparse(benchmark::State& state)
 {
 	const size_t n = state.range(0);
 
-	Eigen::SparseMatrix<double> matrix1(createSparse(n, n, 0.25));
-	Eigen::SparseMatrix<double> matrix2(createSparse(n, n, 0.25));
+	Eigen::SparseMatrix<double> matrix1(createSparse(n, n, 0.10));
+	Eigen::SparseMatrix<double> matrix2(createSparse(n, n, 0.10));
 	Eigen::SparseMatrix<double> matrix3;
 
 	while (state.KeepRunning())
@@ -118,7 +117,7 @@ static void BM_gemv_sparse(benchmark::State& state)
 {
 	const size_t n = state.range(0);
 
-	Eigen::SparseMatrix<double> matrix1(createSparse(n, n, 0.25));
+	Eigen::SparseMatrix<double> matrix1(createSparse(n, n, 0.10));
 	Eigen::VectorXd vector1(Eigen::VectorXd::Random(n));
 	Eigen::VectorXd vector2;
 
@@ -160,6 +159,7 @@ static void BM_4x4mv4m_vector(benchmark::State& state)
 			result[i].noalias() = matrix * vertices[i] ;
 		}
 	}
+	state.SetItemsProcessed(state.iterations() * n);
 }
 
 BENCHMARK(BM_4x4mv4m_vector)->RangeMultiplier(2)->Range(low, high);
@@ -189,6 +189,7 @@ static void BM_transformv3m_vector(benchmark::State& state)
 			result[i] = transform * vertices[i];
 		}
 	}
+	state.SetItemsProcessed(state.iterations() * n);
 }
 
 BENCHMARK(BM_transformv3m_vector)->RangeMultiplier(2)->Range(low, high);
@@ -220,6 +221,7 @@ static void BM_transformv4m_vector(benchmark::State& state)
 			result[i] = transform * vertices[i];
 		}
 	}
+	state.SetItemsProcessed(state.iterations() * n);
 }
 
 BENCHMARK(BM_transformv4m_vector)->RangeMultiplier(2)->Range(low, high);
