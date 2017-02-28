@@ -32,8 +32,8 @@ target_link_libraries(VectorizeAVX ${LIBS})
 
 target_compile_options(VectorizeAVX PRIVATE /arch:AVX)
 
-#target_compile_definitions(VectorizeAVX PRIVATE 
-#	EIGEN_NO_DEBUG=1)
+target_compile_definitions(VectorizeAVX PRIVATE 
+	EIGEN_NO_DEBUG=1)
 
 set_target_properties(VectorizeAVX PROPERTIES FOLDER "Benchmarks")
 

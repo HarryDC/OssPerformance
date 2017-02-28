@@ -5,7 +5,7 @@
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 #include <Eigen/Geometry>
-#include <Eigen/StdVector>
+#include <Eigen/src/StlSupport/StdVector.h>
 
 #include <iostream>
 #include <random>
@@ -143,8 +143,8 @@ static void BM_4x4mv4m_vector(benchmark::State& state)
 
 	typedef Eigen::aligned_allocator<Eigen::Vector4f> Allocator;
 
-	std::vector<Eigen::Vector4d, Allocator4> vertices(n);
-	std::vector<Eigen::Vector4d, Allocator4> result(n);
+	std::vector<Eigen::Vector4d> vertices(n);
+	std::vector<Eigen::Vector4d> result(n);
 	Eigen::Matrix4d matrix(Eigen::Matrix4d::Random());
 
 	for (size_t i = 0; i < n; ++i)
@@ -169,8 +169,8 @@ static void BM_transformv3m_vector(benchmark::State& state)
 	const size_t n = state.range(0);
 
 
-	std::vector <Eigen::Vector3d, Allocator3> vertices(n);
-	std::vector<Eigen::Vector3d, Allocator3> result(n);
+	std::vector <Eigen::Vector3d> vertices(n);
+	std::vector<Eigen::Vector3d> result(n);
 	Eigen::Transform<double, 3, Eigen::Isometry> transform;
 
 	transform.makeAffine();
@@ -200,8 +200,8 @@ static void BM_transformv4m_vector(benchmark::State& state)
 
 	typedef Eigen::aligned_allocator<Eigen::Vector4f> Allocator;
 
-	std::vector<Eigen::Vector4d, Allocator4> vertices(n);
-	std::vector<Eigen::Vector4d, Allocator4> result(n);
+	std::vector<Eigen::Vector4d> vertices(n);
+	std::vector<Eigen::Vector4d> result(n);
 	Eigen::Transform<double, 3, Eigen::Isometry> transform;
 
 	transform.makeAffine();
