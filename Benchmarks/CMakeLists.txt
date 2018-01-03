@@ -33,5 +33,6 @@ include_directories(${benchmark_INCLUDE_DIR})
 
 add_subdirectory(StdLibrary)
 add_subdirectory(Collision)
-add_subdirectory(Compute)
+#add_subdirectory(Compute)
 add_subdirectory(Vectorization)
+add_subdirectory(AabbTree)
